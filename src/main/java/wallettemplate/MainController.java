@@ -16,6 +16,14 @@
 
 package wallettemplate;
 
+import javafx.beans.binding.Bindings;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.cell.TextFieldListCell;
+import javafx.util.Callback;
+import javafx.util.StringConverter;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -32,11 +40,15 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.util.Duration;
 import org.fxmisc.easybind.EasyBind;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import wallettemplate.controls.ClickableBitcoinAddress;
 import wallettemplate.controls.NotificationBarPane;
 import wallettemplate.utils.BitcoinUIModel;
 import wallettemplate.utils.easing.EasingMode;
 import wallettemplate.utils.easing.ElasticInterpolator;
+
+import java.io.IOException;
 
 import static wallettemplate.Main.bitcoin;
 
@@ -45,11 +57,14 @@ import static wallettemplate.Main.bitcoin;
  * after. This class handles all the updates and event handling for the main UI.
  */
 public class MainController {
+    final static Logger log = LoggerFactory.getLogger(MainController.class);
     public HBox controlsBox;
     public Label balance;
+    public Label environment;
     public Button sendMoneyOutBtn;
     public ClickableBitcoinAddress addressControl;
-
+    public ListView<Transaction> transactionList;
+    public MonetaryFormat eightBTC = new MonetaryFormat().shift(0).minDecimals(8);
     private BitcoinUIModel model = new BitcoinUIModel();
     private NotificationBarPane.Item syncItem;
 
@@ -61,7 +76,9 @@ public class MainController {
     public void onBitcoinSetup() {
         model.setWallet(bitcoin.wallet());
         addressControl.addressProperty().bind(model.addressProperty());
-        balance.textProperty().bind(EasyBind.map(model.balanceProperty(), coin -> MonetaryFormat.BTC.noCode().format(coin).toString()));
+        MonetaryFormat eightBTC = new MonetaryFormat().shift(0).minDecimals(8);
+        balance.textProperty().bind(EasyBind.map(model.balanceProperty(), coin -> eightBTC.noCode().format(coin).toString()));
+        environment.textProperty().bind(model.environmentProperty());
         // Don't let the user click send money when the wallet is empty.
         sendMoneyOutBtn.disableProperty().bind(model.balanceProperty().isEqualTo(Coin.ZERO));
 
@@ -101,6 +118,30 @@ public class MainController {
                 showBitcoinSyncMessage();
             }
         });
+        Bindings.bindContent(transactionList.getItems(), model.getTransactions());
+
+        transactionList.setCellFactory(param -> {
+            return new TextFieldListCell<>(new StringConverter<Transaction>() {
+                @Override
+                public String toString(Transaction tx) {
+                    Coin value = tx.getValue(Main.bitcoin.wallet());
+                   if (value.isPositive()) {
+                       return "Incoming payment of " + eightBTC.format(value);
+                    } else { if (value.isNegative()) {
+                        Address address = tx.getOutput(0).getAddressFromP2PKHScript(Main.params);
+                        return "Outbound payment to " + address;
+                   }
+
+                   }
+                    return "payment with id " + tx.getHash();
+                }
+
+                @Override
+                public Transaction fromString(String string) {
+                    return null;
+                }
+            });
+        });
     }
 
     private void showBitcoinSyncMessage() {
@@ -116,7 +157,27 @@ public class MainController {
         Main.OverlayUI<WalletSettingsController> screen = Main.instance.overlayUI("wallet_settings.fxml");
         screen.controller.initialize(null);
     }
+    public void debugClicked(ActionEvent event) {
+        //String cmd = "open /Applications/Utilities/Contents/MacOS/Console.app";
+        String osName = System.getProperty("os.name");
+        String cmd = null;
+        if (osName.startsWith("Mac")) {
+             cmd = "open /Applications/Utilities/Console.app first-wallet.log";
+        } else
+            if (osName.startsWith("Windows")) {
+                cmd = "start notepad.exe first-wallet.log";
+            } else {
+                cmd = "open vim first-wallet.log";
+            };
 
+        //                /Applications/Utilities/Console.app
+        try {
+            Process p = Runtime.getRuntime().exec(cmd);
+        } catch (IOException e) {
+            log.error("Failed to load log display application: " + e.getMessage());
+            System.exit(1);
+        }
+    }
     public void restoreFromSeedAnimation() {
         // Buttons slide out ...
         TranslateTransition leave = new TranslateTransition(Duration.millis(1200), controlsBox);

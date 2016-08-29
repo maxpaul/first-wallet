@@ -49,7 +49,7 @@ public class Main extends Application {
     public static NetworkParameters params = TestNet3Params.get();
     public static final String APP_NAME = "WalletTemplate";
 
-    private static String WALLET_FILE_NAME;
+    private static String WALLET_FILE_NAME ="fstwallet";
     public static WalletAppKit bitcoin;
     public static Main instance;
 
@@ -137,7 +137,7 @@ public class Main extends Application {
 
     public void setupWalletKit(@Nullable DeterministicSeed seed) {
         // If seed is non-null it means we are restoring from backup.
-        bitcoin = new WalletAppKit(params, new File("."), WALLET_FILE_NAME) {
+        bitcoin = new WalletAppKit(params, new File(datadir), WALLET_FILE_NAME) {
             @Override
             protected void onSetupCompleted() {
                 // Don't make the user wait for confirmations for now, as the intention is they're sending it
@@ -267,8 +267,7 @@ public class Main extends Application {
 
         // get the network parameters values based on the commandline args
         params = NetworkEnum.valueOf(network).get();
-        WALLET_FILE_NAME = APP_NAME.replaceAll("[^a-zA-Z0-9.-]", "_") + "-"
-                + params.getPaymentProtocolId();
+
         log.info("Launching application .... ");
 
 

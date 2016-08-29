@@ -16,17 +16,19 @@
 
 package wallettemplate.utils;
 
+import javafx.beans.property.*;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
+import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.AbstractWalletEventListener;
 import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
 import org.bitcoinj.core.*;
 import javafx.application.Platform;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import wallettemplate.CmdCLI;
 
+import java.text.DecimalFormat;
 import java.util.Date;
 
 /**
@@ -37,6 +39,8 @@ public class BitcoinUIModel {
     private SimpleObjectProperty<Coin> balance = new SimpleObjectProperty<>(Coin.ZERO);
     private SimpleDoubleProperty syncProgress = new SimpleDoubleProperty(-1);
     private ProgressBarUpdater syncProgressUpdater = new ProgressBarUpdater();
+    private ObservableList<Transaction> transactions = FXCollections.observableArrayList();
+    private SimpleStringProperty environment = new SimpleStringProperty();
 
     public BitcoinUIModel() {
     }
@@ -58,6 +62,9 @@ public class BitcoinUIModel {
     private void update(Wallet wallet) {
         balance.set(wallet.getBalance());
         address.set(wallet.currentReceiveAddress());
+        transactions.setAll(wallet.getTransactionsByTime());
+        // get the environment value for display
+        environment.set(CmdCLI.getNetArg("network"));
     }
 
     private class ProgressBarUpdater extends DownloadProgressTracker {
@@ -84,5 +91,9 @@ public class BitcoinUIModel {
 
     public ReadOnlyObjectProperty<Coin> balanceProperty() {
         return balance;
+    }
+    public ReadOnlyStringProperty environmentProperty() { return environment; }
+    public ObservableList<Transaction> getTransactions() {
+        return transactions;
     }
 }
