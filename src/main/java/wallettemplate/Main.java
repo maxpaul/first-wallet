@@ -32,6 +32,8 @@ import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import wallettemplate.controls.NotificationBarPane;
 import wallettemplate.utils.GuiUtils;
 import wallettemplate.utils.TextFieldValidator;
@@ -46,9 +48,8 @@ import static wallettemplate.utils.GuiUtils.*;
 public class Main extends Application {
     public static NetworkParameters params = TestNet3Params.get();
     public static final String APP_NAME = "WalletTemplate";
-    private static final String WALLET_FILE_NAME = APP_NAME.replaceAll("[^a-zA-Z0-9.-]", "_") + "-"
-            + params.getPaymentProtocolId();
 
+    private static String WALLET_FILE_NAME;
     public static WalletAppKit bitcoin;
     public static Main instance;
 
@@ -57,6 +58,11 @@ public class Main extends Application {
     public MainController controller;
     public NotificationBarPane notificationBar;
     public Stage mainWindow;
+
+    final static Logger log = LoggerFactory.getLogger(Main.class);
+    public static String datadir;
+    public static String network;
+
 
     @Override
     public void start(Stage mainWindow) throws Exception {
@@ -254,6 +260,19 @@ public class Main extends Application {
     }
 
     public static void main(String[] args) {
+//  Parse the commandline args and get the datadir and network values
+        new CmdCLI(args).parse();
+        datadir = CmdCLI.getDataArg("datadir");
+        network = CmdCLI.getNetArg("network");
+
+        // get the network parameters values based on the commandline args
+        params = NetworkEnum.valueOf(network).get();
+        WALLET_FILE_NAME = APP_NAME.replaceAll("[^a-zA-Z0-9.-]", "_") + "-"
+                + params.getPaymentProtocolId();
+        log.info("Launching application .... ");
+
+
+        // run the gui
         launch(args);
     }
 }
