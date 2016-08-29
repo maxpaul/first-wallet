@@ -165,7 +165,8 @@ public class MainController {
              cmd = "open /Applications/Utilities/Console.app first-wallet.log";
         } else
             if (osName.startsWith("Windows")) {
-                cmd = "start notepad.exe first-wallet.log";
+               // cmd = "start notepad.exe first-wallet.log";
+                cmd = "notepad.exe first-wallet.log";
             } else {
                 cmd = "open vim first-wallet.log";
             };
